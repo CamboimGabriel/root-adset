@@ -120,6 +120,12 @@ export function undoPick(state: DraftState): DraftState {
   return { ...state, picks: state.picks.slice(0, -1) };
 }
 
+export type DraftAction = { type: "pick"; factionId: string } | { type: "undo" };
+
+export function applyDraftAction(state: DraftState, action: DraftAction): DraftState {
+  return action.type === "pick" ? pickFaction(state, action.factionId) : undoPick(state);
+}
+
 export function getFactionByPlayer(state: DraftState): Map<number, string> {
   return new Map(state.picks.map((factionId, pickNumber) => [getPickerIndex(state, pickNumber), factionId]));
 }

@@ -5,29 +5,41 @@ import { useSetupForm } from "../use-setup-form";
 import { DraftBoard } from "./draft-board";
 import { SetupForm } from "./setup-form";
 
+const LOADING = "text-center text-stone-400";
+
 export function AdsetApp() {
-  const { isHydrated, board, openedFactionBoard, openFactionBoard, closeFactionBoard, startDraft, pick, undo, reset } =
-    useAdsetDraft();
-  const setup = useSetupForm(startDraft);
+  const draft = useAdsetDraft();
+  const setup = useSetupForm(draft.startDraft, draft.joinMatch);
 
-  if (!isHydrated) return null;
+  if (!draft.isHydrated) return null;
 
-  if (board) {
+  if (draft.isLoadingMatch) return <p className={LOADING}>Carregando partida {draft.matchId}…</p>;
+
+  if (draft.board && draft.matchId) {
     return (
       <DraftBoard
-        {...board}
-        openedFactionBoard={openedFactionBoard}
-        onPick={pick}
-        onOpenFactionBoard={openFactionBoard}
-        onCloseFactionBoard={closeFactionBoard}
-        onUndo={undo}
-        onReset={reset}
+        {...draft.board}
+        matchId={draft.matchId}
+        error={draft.error}
+        isBusy={draft.isBusy}
+        onCopyMatchId={draft.copyMatchId}
+        openedFactionBoard={draft.openedFactionBoard}
+        onPick={draft.pick}
+        onOpenFactionBoard={draft.openFactionBoard}
+        onCloseFactionBoard={draft.closeFactionBoard}
+        onUndo={draft.undo}
+        onLeave={draft.leaveMatch}
       />
     );
   }
 
   return (
     <SetupForm
+      joinMatchId={setup.joinMatchId}
+      onJoinMatchIdChange={setup.changeJoinMatchId}
+      onJoin={setup.handleJoin}
+      matchError={draft.error}
+      isBusy={draft.isBusy}
       playerNames={setup.playerNames}
       onNameChange={setup.changeName}
       onAddPlayer={setup.addPlayer}

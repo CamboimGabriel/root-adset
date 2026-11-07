@@ -1,23 +1,9 @@
-import type { DraftState } from "./draft";
-import { isValidDraftState } from "./validators";
+import { isValidMatchId } from "./validators";
 
-const STORAGE_KEY = "root-sorteador:adset-draft";
+const STORAGE_KEY = "root-sorteador:match-id";
 const listeners = new Set<() => void>();
 
-let cachedRaw: string | null = null;
-let cachedDraft: DraftState | null = null;
-
-function parseDraft(raw: string | null): DraftState | null {
-  if (!raw) return null;
-  try {
-    const parsed: unknown = JSON.parse(raw);
-    return isValidDraftState(parsed) ? parsed : null;
-  } catch {
-    return null;
-  }
-}
-
-export function subscribeDraft(listener: () => void): () => void {
+export function subscribeMatchId(listener: () => void): () => void {
   listeners.add(listener);
   window.addEventListener("storage", listener);
   return () => {
@@ -26,22 +12,18 @@ export function subscribeDraft(listener: () => void): () => void {
   };
 }
 
-export function getDraftSnapshot(): DraftState | null {
-  const raw = localStorage.getItem(STORAGE_KEY);
-  if (raw !== cachedRaw) {
-    cachedRaw = raw;
-    cachedDraft = parseDraft(raw);
-  }
-  return cachedDraft;
+export function getMatchIdSnapshot(): string | null {
+  const id = localStorage.getItem(STORAGE_KEY);
+  return id && isValidMatchId(id) ? id : null;
 }
 
-export function getServerDraftSnapshot(): undefined {
+export function getServerMatchIdSnapshot(): undefined {
   return undefined;
 }
 
-export function saveDraft(draft: DraftState | null): void {
-  if (draft) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(draft));
+export function saveMatchId(id: string | null): void {
+  if (id) {
+    localStorage.setItem(STORAGE_KEY, id);
   } else {
     localStorage.removeItem(STORAGE_KEY);
   }

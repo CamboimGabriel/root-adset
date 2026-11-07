@@ -1,4 +1,4 @@
-import { getEligibleFactions, isMilitant, type DraftSettings, type DraftState } from "./draft";
+import { getEligibleFactions, isMilitant, type DraftAction, type DraftSettings, type DraftState } from "./draft";
 import { CHARACTERS_BY_ID, FACTIONS_BY_ID, KNAVES_ID } from "./factions";
 import { DECKS_BY_ID, MAPS_BY_ID } from "./maps-and-decks";
 
@@ -66,6 +66,41 @@ export function validateDraftSettings(settings: DraftSettings): string[] {
 
 function isStringArray(value: unknown): value is string[] {
   return Array.isArray(value) && value.every((item) => typeof item === "string");
+}
+
+export const MATCH_ID_LENGTH = 6;
+export const MATCH_ID_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+const MATCH_ID_PATTERN = new RegExp(`^[${MATCH_ID_ALPHABET}]{${MATCH_ID_LENGTH}}$`);
+
+export function normalizeMatchId(id: string): string {
+  return id.trim().toUpperCase();
+}
+
+export function isValidMatchId(id: string): boolean {
+  return MATCH_ID_PATTERN.test(id);
+}
+
+export function isDraftSettings(value: unknown): value is DraftSettings {
+  if (typeof value !== "object" || value === null) return false;
+  const settings = value as Record<string, unknown>;
+  return (
+    isStringArray(settings.playerNames) &&
+    isStringArray(settings.factionIds) &&
+    isStringArray(settings.characterIds) &&
+    isStringArray(settings.mapIds) &&
+    isStringArray(settings.deckIds)
+  );
+}
+
+export function isDraftAction(value: unknown): value is DraftAction {
+  if (typeof value !== "object" || value === null) return false;
+  const action = value as Record<string, unknown>;
+  if (action.type === "undo") return true;
+  return action.type === "pick" && typeof action.factionId === "string";
+}
+
+export function isValidMatchVersion(value: unknown): value is number {
+  return Number.isInteger(value) && (value as number) >= 0;
 }
 
 function isValidDraftCard(value: unknown): boolean {

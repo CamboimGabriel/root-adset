@@ -114,8 +114,9 @@ function buildToggleGroups(selectedIds: Set<string>): ToggleGroup[] {
   }));
 }
 
-export function useSetupForm(onStart: (settings: DraftSettings) => void) {
+export function useSetupForm(onStart: (settings: DraftSettings) => void, onJoin: (matchId: string) => void) {
   const [playerNames, setPlayerNames] = useState<string[]>(() => Array(INITIAL_PLAYER_COUNT).fill(""));
+  const [joinMatchId, setJoinMatchId] = useState("");
   const [selectedIds, setSelectedIds] = useState(
     () => new Set([...DEFAULT_SELECTED_IDS, ...DEFAULT_SELECTED_COMPONENT_KEYS]),
   );
@@ -162,7 +163,15 @@ export function useSetupForm(onStart: (settings: DraftSettings) => void) {
     if (errors.length === 0) onStart(settings);
   };
 
+  const handleJoin = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    onJoin(joinMatchId);
+  };
+
   return {
+    joinMatchId,
+    changeJoinMatchId: setJoinMatchId,
+    handleJoin,
     playerNames,
     changeName,
     addPlayer,

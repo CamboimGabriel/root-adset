@@ -3,12 +3,16 @@ import type { FactionKind } from "../factions";
 import type { DraftBoardView, FactionBoardView, PoolCardStatus } from "../use-adset-draft";
 
 interface DraftBoardProps extends DraftBoardView {
+  matchId: string;
+  error: string | null;
+  isBusy: boolean;
+  onCopyMatchId: () => void;
   openedFactionBoard: FactionBoardView | null;
   onPick: (factionId: string) => void;
   onOpenFactionBoard: (factionId: string) => void;
   onCloseFactionBoard: () => void;
   onUndo: () => void;
-  onReset: () => void;
+  onLeave: () => void;
 }
 
 const SECTION = "flex flex-col gap-3 rounded-2xl border border-stone-700 bg-stone-900/60 p-5";
@@ -43,6 +47,9 @@ const BOARD_IMAGE = "h-auto w-full rounded-lg";
 const BOARD_IMAGE_SIZES = "(max-width: 1024px) 100vw, 1024px";
 const CARD_DETAIL = "text-sm text-stone-300";
 const CARD_STATUS_LABEL = "text-xs font-semibold uppercase tracking-wide text-stone-300";
+const MATCH_BAR = "flex items-center justify-between gap-4 rounded-2xl border border-stone-700 bg-stone-900/60 px-5 py-3";
+const MATCH_ID = "font-mono text-2xl font-bold tracking-widest text-amber-200";
+const ERROR_BOX = "rounded-xl border border-red-500/50 bg-red-950/40 p-4 text-sm text-red-200";
 const COMPONENT_GRID = "grid grid-cols-1 gap-3 sm:grid-cols-2";
 const COMPONENT_CARD = "flex items-start gap-4 rounded-xl bg-stone-800/60 p-4 ring-1 ring-stone-700";
 const COMPONENT_IMAGE = "h-auto w-28 shrink-0 rounded-lg";
@@ -50,6 +57,10 @@ const ACTIONS = "flex flex-wrap gap-3";
 const SECONDARY_BUTTON = "rounded-lg border border-stone-600 px-4 py-2 text-sm text-stone-200 transition hover:bg-stone-800 disabled:opacity-40";
 
 export function DraftBoard({
+  matchId,
+  error,
+  isBusy,
+  onCopyMatchId,
   map,
   deck,
   players,
@@ -62,10 +73,22 @@ export function DraftBoard({
   onOpenFactionBoard,
   onCloseFactionBoard,
   onUndo,
-  onReset,
+  onLeave,
 }: DraftBoardProps) {
   return (
     <div className="flex flex-col gap-6">
+      <div className={MATCH_BAR}>
+        <span className="flex flex-col">
+          <span className={HINT}>ID da partida</span>
+          <span className={MATCH_ID}>{matchId}</span>
+        </span>
+        <button type="button" className={SECONDARY_BUTTON} onClick={onCopyMatchId}>
+          Copiar ID
+        </button>
+      </div>
+
+      {error && <p className={ERROR_BOX}>{error}</p>}
+
       <div className={BANNER}>
         {isComplete ? (
           <p className={BANNER_TITLE}>Draft concluído!</p>
@@ -128,7 +151,7 @@ export function DraftBoard({
               className={`${CARD_BASE} ${CARD_KIND[card.kind]} ${CARD_STATUS[card.status]}`}
               style={{ borderLeftColor: card.color }}
             >
-              <button type="button" disabled={card.status !== "available"} onClick={() => onPick(card.id)} className={CARD_PICK_AREA}>
+              <button type="button" disabled={isBusy || card.status !== "available"} onClick={() => onPick(card.id)} className={CARD_PICK_AREA}>
                 <Image src={card.icon} alt="" width={56} height={56} className={CARD_ICON} style={{ backgroundColor: card.color }} />
                 <span className="flex flex-col gap-1">
                   <span className="font-semibold">{card.name}</span>
@@ -175,11 +198,11 @@ export function DraftBoard({
       )}
 
       <div className={ACTIONS}>
-        <button type="button" className={SECONDARY_BUTTON} disabled={!canUndo} onClick={onUndo}>
+        <button type="button" className={SECONDARY_BUTTON} disabled={isBusy || !canUndo} onClick={onUndo}>
           Desfazer última escolha
         </button>
-        <button type="button" className={SECONDARY_BUTTON} onClick={onReset}>
-          Novo sorteio
+        <button type="button" className={SECONDARY_BUTTON} onClick={onLeave}>
+          Sair da partida
         </button>
       </div>
     </div>
