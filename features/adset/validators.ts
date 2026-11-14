@@ -1,5 +1,5 @@
-import { getEligibleFactions, isMilitant, type DraftAction, type DraftSettings, type DraftState } from "./draft";
-import { CHARACTERS_BY_ID, FACTIONS_BY_ID, KNAVES_ID } from "./factions";
+import { getDealableCount, getEligibleFactions, isMilitant, type DraftAction, type DraftSettings, type DraftState } from "./draft";
+import { CHARACTERS_BY_ID, FACTIONS_BY_ID } from "./factions";
 import { DECKS_BY_ID, MAPS_BY_ID } from "./maps-and-decks";
 import type { CompetitiveActionInput, CompetitiveSession } from "./competitive-draft";
 import type { Match, MatchMode } from "./match-repository";
@@ -29,15 +29,11 @@ export function validateFactionSelection(factionIds: string[], playerCount: numb
   if (factionIds.includes("vagabond-2") && !hasVagabond) {
     errors.push("O segundo Malandro só pode entrar junto com o primeiro.");
   }
-  if (hasVagabond && factionIds.includes(KNAVES_ID)) {
-    errors.push("Malandro e Patifes do Bosque Profundo não podem estar no mesmo jogo.");
-  }
-
   const eligible = getEligibleFactions(factionIds, playerCount);
   if (!eligible.some((faction) => isMilitant(faction, playerCount))) {
     errors.push("Selecione pelo menos uma facção militante.");
   }
-  if (eligible.length < playerCount + 1) {
+  if (getDealableCount(eligible) < playerCount + 1) {
     const twoPlayerHint = playerCount === 2 ? " militantes (com 2 jogadores, insurgentes ficam de fora)" : "";
     errors.push(`Selecione pelo menos ${playerCount + 1} facções${twoPlayerHint}.`);
   }

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import {
+  getBlockingPick,
   getCurrentPickerIndex,
   getFactionByPlayer,
   isCardLocked,
@@ -32,7 +33,7 @@ import { DECKS_BY_ID, MAPS_BY_ID, type GameComponent } from "./maps-and-decks";
 
 const POLL_INTERVAL_MS = 3000;
 
-export type PoolCardStatus = "available" | "locked" | "taken";
+export type PoolCardStatus = "available" | "locked" | "excluded" | "taken";
 
 export interface FactionView {
   id: string;
@@ -56,6 +57,7 @@ export interface FactionBoardView {
 export interface PoolCardView extends FactionView {
   status: PoolCardStatus;
   takenBy?: string;
+  excludedBy?: string;
   isFavorite: boolean;
 }
 
@@ -214,6 +216,12 @@ function toCompetitiveBoardView(session: CompetitiveSession, settings: DraftSett
   };
 }
 
+function getPoolCardStatus(isTaken: boolean, isExcluded: boolean, isLocked: boolean): PoolCardStatus {
+  if (isTaken) return "taken";
+  if (isExcluded) return "excluded";
+  return isLocked ? "locked" : "available";
+}
+
 function toBoardView(draft: DraftState, competitive: CompetitiveSession | null): DraftBoardView {
   const currentPickerIndex = getCurrentPickerIndex(draft);
   const playerCount = draft.turnOrder.length;
@@ -233,11 +241,13 @@ function toBoardView(draft: DraftState, competitive: CompetitiveSession | null):
 
   const pool = draft.pool.map((card) => {
     const takenBy = playerByFaction.get(card.factionId);
-    const status: PoolCardStatus = takenBy ? "taken" : isCardLocked(draft, card) ? "locked" : "available";
+    const blockingPick = getBlockingPick(draft, card);
+    const status = getPoolCardStatus(Boolean(takenBy), blockingPick !== null, isCardLocked(draft, card));
     return {
       ...toFactionView(card.factionId, playerCount, card.characterId),
       status,
       takenBy,
+      excludedBy: blockingPick ? FACTIONS_BY_ID.get(blockingPick)?.name : undefined,
       isFavorite: card.isFavorite === true,
     };
   });

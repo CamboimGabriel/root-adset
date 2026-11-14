@@ -1,5 +1,6 @@
 import {
   createDraft,
+  getDealableCount,
   getEligibleFactions,
   isMilitant,
   shuffle,
@@ -84,7 +85,7 @@ function validateBanKeepsDraftPossible(session: CompetitiveSession, settings: Dr
   const banned = new Set([...getBannedIds(session), factionId]);
   const remaining = getEligibleFactions(settings.factionIds, playerCount).filter((faction) => !banned.has(faction.id));
 
-  if (remaining.length < playerCount + 1) {
+  if (getDealableCount(remaining) < playerCount + 1) {
     return `Banir essa facção deixaria menos de ${playerCount + 1} facções para o ADSET.`;
   }
   if (!remaining.some((faction) => isMilitant(faction, playerCount))) {

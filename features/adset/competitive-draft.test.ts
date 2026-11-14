@@ -11,7 +11,17 @@ import {
   type CompetitiveActionInput,
   type CompetitiveSession,
 } from "./competitive-draft";
-import { createDraft, isMilitant, type DraftSettings, type DraftState, type Random } from "./draft";
+import {
+  createDraft,
+  getBlockingPick,
+  isCardAvailable,
+  isDraftComplete,
+  isMilitant,
+  pickFaction,
+  type DraftSettings,
+  type DraftState,
+  type Random,
+} from "./draft";
 import { FACTIONS, FACTIONS_BY_ID, isFactionPlayable } from "./factions";
 
 const OFFICIAL_FACTION_IDS = [
@@ -77,6 +87,17 @@ function expectValidAdset(draft: DraftState, settings: DraftSettings, bannedIds:
   });
   const vagabondCards = draft.pool.filter((card) => FACTIONS_BY_ID.get(card.factionId)?.isVagabond);
   for (const card of vagabondCards) expect(settings.characterIds).toContain(card.characterId);
+  if (draft.pool.some((card) => card.factionId === "knaves")) expect(vagabondCards.length).toBeLessThanOrEqual(1);
+}
+
+function playRandomDraft(draft: DraftState, random: Random): DraftState {
+  let state = draft;
+  while (!isDraftComplete(state)) {
+    const available = state.pool.filter((card) => isCardAvailable(state, card));
+    expect(available.length).toBeGreaterThan(0);
+    state = pickFaction(state, available[Math.floor(random() * available.length)].factionId);
+  }
+  return state;
 }
 
 describe("snake order", () => {
@@ -232,17 +253,55 @@ describe("final ADSET", () => {
   });
 
   it("keeps every original ADSET restriction for every player count", () => {
-    const allFactionIds = FACTIONS.filter((faction) => faction.id !== "knaves").map((faction) => faction.id);
+    const allFactionIds = FACTIONS.map((faction) => faction.id);
     const random = seededRandom(11);
     for (const count of [2, 3, 4, 5, 6]) {
       const settings = settingsFor(Array.from({ length: count }, (_, index) => `P${index}`), allFactionIds);
       for (let run = 0; run < 200; run++) {
-        expectValidAdset(createDraft(settings, random), settings);
+        const classic = createDraft(settings, random);
+        expectValidAdset(classic, settings);
+        playRandomDraft(classic, random);
         const reservedIds = count === 2 ? ["marquise", "eyrie"] : ["alliance", "lizards"];
         const draft = createDraft(settings, random, { bannedIds: ["duchy"], reservedIds });
         expectValidAdset(draft, settings, ["duchy"]);
         for (const id of reservedIds) expect(draft.pool.map((card) => card.factionId)).toContain(id);
       }
     }
+  });
+});
+
+describe("Vagabond and Knaves", () => {
+  const settings = settingsFor(["A", "B", "C"], ["marquise", "vagabond", "vagabond-2", "knaves", "alliance", "lizards"]);
+  const poolWith = (factionIds: string[]): DraftState => ({
+    mapId: "autumn",
+    deckId: "base",
+    turnOrder: ["A", "B", "C"],
+    pool: factionIds.map((factionId) => ({ factionId, lockedUntilMilitant: false })),
+    picks: [],
+  });
+
+  it("can share a pool, but picking one makes the other unavailable", () => {
+    const draft = poolWith(["marquise", "vagabond", "knaves", "alliance"]);
+    const afterVagabond = pickFaction(draft, "vagabond");
+    const knaves = afterVagabond.pool.find((card) => card.factionId === "knaves")!;
+    expect(isCardAvailable(afterVagabond, knaves)).toBe(false);
+    expect(getBlockingPick(afterVagabond, knaves)).toBe("vagabond");
+    expect(pickFaction(afterVagabond, "knaves")).toBe(afterVagabond);
+
+    const afterKnaves = pickFaction(draft, "knaves");
+    expect(isCardAvailable(afterKnaves, afterKnaves.pool.find((card) => card.factionId === "vagabond")!)).toBe(false);
+  });
+
+  it("deals Knaves with at most one Vagabond so the draft can always finish", () => {
+    const random = seededRandom(5);
+    let dealtTogether = 0;
+    for (let run = 0; run < 500; run++) {
+      const draft = createDraft(settings, random);
+      expectValidAdset(draft, settings);
+      const ids = draft.pool.map((card) => card.factionId);
+      if (ids.includes("knaves") && ids.includes("vagabond")) dealtTogether++;
+      playRandomDraft(draft, random);
+    }
+    expect(dealtTogether).toBeGreaterThan(0);
   });
 });

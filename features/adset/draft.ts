@@ -1,4 +1,4 @@
-import { FACTIONS_BY_ID, getFactionKind, isFactionPlayable, type Faction } from "./factions";
+import { FACTIONS_BY_ID, getFactionKind, isFactionPlayable, KNAVES_ID, type Faction } from "./factions";
 import { getRecommendedMapIds } from "./maps-and-decks";
 
 export interface DraftSettings {
@@ -60,6 +60,29 @@ export function isMilitant(faction: Faction, playerCount: number): boolean {
   return getFactionKind(faction, playerCount) === "militant";
 }
 
+export function areFactionsExclusive(a: Faction, b: Faction): boolean {
+  return (a.id === KNAVES_ID && b.isVagabond === true) || (b.id === KNAVES_ID && a.isVagabond === true);
+}
+
+function canJoinPool(pool: readonly Faction[], faction: Faction): boolean {
+  const members = [...pool, faction];
+  const hasKnaves = members.some((member) => member.id === KNAVES_ID);
+  return !hasKnaves || members.filter((member) => member.isVagabond).length <= 1;
+}
+
+export function getDealableCount(factions: readonly Faction[]): number {
+  return factions.reduce<Faction[]>((pool, faction) => (canJoinPool(pool, faction) ? [...pool, faction] : pool), []).length;
+}
+
+function fillPool(base: readonly Faction[], candidates: readonly Faction[], count: number): Faction[] {
+  const fill: Faction[] = [];
+  for (const faction of candidates) {
+    if (fill.length === count) break;
+    if (canJoinPool([...base, ...fill], faction)) fill.push(faction);
+  }
+  return fill;
+}
+
 export function createDraft(
   settings: DraftSettings,
   random: Random = Math.random,
@@ -80,7 +103,7 @@ export function createDraft(
     )[0];
   const otherReserved = reserved.filter((faction) => faction !== guaranteedMilitant);
   const remaining = eligible.filter((faction) => faction !== guaranteedMilitant && !reservedIds.has(faction.id));
-  const randomFill = shuffle(remaining, random).slice(0, playerCount - otherReserved.length);
+  const randomFill = fillPool([guaranteedMilitant, ...otherReserved], shuffle(remaining, random), playerCount - otherReserved.length);
   const dealt = otherReserved.length > 0 ? shuffle([...otherReserved, ...randomFill], random) : randomFill;
   const dealtFactions = [guaranteedMilitant, ...dealt];
   const characters = shuffle(settings.characterIds, random);
@@ -124,8 +147,22 @@ export function isCardLocked(state: DraftState, card: DraftCard): boolean {
   return card.lockedUntilMilitant && !hasMilitantPick(state);
 }
 
+export function getBlockingPick(state: DraftState, card: DraftCard): string | null {
+  const faction = FACTIONS_BY_ID.get(card.factionId);
+  if (!faction) return null;
+  return state.picks.find((id) => {
+    const picked = FACTIONS_BY_ID.get(id);
+    return picked !== undefined && areFactionsExclusive(faction, picked);
+  }) ?? null;
+}
+
 export function isCardAvailable(state: DraftState, card: DraftCard): boolean {
-  return !isDraftComplete(state) && !state.picks.includes(card.factionId) && !isCardLocked(state, card);
+  return (
+    !isDraftComplete(state) &&
+    !state.picks.includes(card.factionId) &&
+    !isCardLocked(state, card) &&
+    getBlockingPick(state, card) === null
+  );
 }
 
 export function pickFaction(state: DraftState, factionId: string): DraftState {

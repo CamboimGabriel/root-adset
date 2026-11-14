@@ -33,6 +33,7 @@ const CARD_KIND: Record<FactionKind, string> = {
 const CARD_STATUS: Record<PoolCardStatus, string> = {
   available: "ring-1 ring-stone-600 hover:ring-amber-400",
   locked: "opacity-60 ring-1 ring-stone-700",
+  excluded: "opacity-40 ring-1 ring-red-900",
   taken: "opacity-40 ring-1 ring-stone-800",
 };
 const CARD_PICK_AREA = "flex items-center gap-4 text-left disabled:cursor-not-allowed";
@@ -196,6 +197,7 @@ export function DraftBoard({
                   {card.characterName && <span className={CARD_DETAIL}>Personagem: {card.characterName}</span>}
                   {card.note && <span className={CARD_DETAIL}>{card.note}</span>}
                   {card.status === "locked" && <span className={CARD_STATUS_LABEL}>Bloqueada até alguém escolher uma militante</span>}
+                  {card.status === "excluded" && <span className={CARD_STATUS_LABEL}>Indisponível: não pode jogar com {card.excludedBy}</span>}
                   {card.status === "taken" && <span className={CARD_STATUS_LABEL}>Escolhida por {card.takenBy}</span>}
                 </span>
               </button>
