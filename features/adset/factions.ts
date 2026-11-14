@@ -41,7 +41,7 @@ export const EXPANSION_LABELS: Record<Expansion, string> = {
   riverfolk: "Expansão Ribeirinha",
   underworld: "Submundo",
   marauder: "Saqueadores",
-  homeland: "Homeland",
+  homeland: "Origens",
   "vagabond-pack": "Pacote do Malandro",
   fan: "Facções de fã",
 };
