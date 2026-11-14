@@ -100,7 +100,7 @@ export function validateCompetitiveAction(
   action: CompetitiveActionInput,
 ): string | null {
   const actor = getCurrentActor(session);
-  if (!actor) return "A fase de bans e favoritos já terminou.";
+  if (!actor) return "A fase de banimentos e favoritos já terminou.";
   if (!getActionableFactionIds(settings).includes(action.factionId)) return "Essa facção não está disponível nesta partida.";
   if (getBannedIds(session).includes(action.factionId)) return "Essa facção já foi banida.";
 

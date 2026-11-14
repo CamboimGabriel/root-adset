@@ -16,7 +16,7 @@ Código: `features/adset/competitive-draft.ts` (regras puras), `features/adset/d
 | No máximo 1 FAVORITE por jogador | idem |
 | Facção banida não pode ser banida nem favoritada | idem |
 | Facção favoritada não pode ser banida nem favoritada de novo | idem |
-| Ban que torna impossível formar um ADSET válido é recusado com explicação | idem, usando as mesmas restrições de `createDraft` |
+| Banimento que torna impossível formar um ADSET válido é recusado com explicação | idem, usando as mesmas restrições de `createDraft` |
 
 As ações ficam na sessão (`CompetitiveSession.actions`) e são persistidas pelo repositório de partidas já existente (`features/adset/match-repository.ts`), então atualizar a página não perde o draft.
 
@@ -27,7 +27,7 @@ As ações ficam na sessão (`CompetitiveSession.actions`) e são persistidas pe
 3. As favoritas não selecionadas voltam ao conjunto normal e podem sair nas vagas aleatórias.
 4. As selecionadas entram como `reservedIds` em `createDraft`, que completa o restante com o algoritmo original. As banidas entram como `bannedIds`.
 
-**Por que qualquer par de favoritas é válido:** as restrições atuais do ADSET são ter a quantidade de jogadores + 1 facções jogáveis para aquela quantidade de jogadores e ter pelo menos uma militante, que não fica bloqueada. Só é possível favoritar facções jogáveis. Se uma favorita selecionada for militante, `createDraft` a usa como militante garantida; caso contrário, sorteia uma militante entre as restantes. A validação de bans impede que restem menos de quantidade de jogadores + 1 facções ou nenhuma militante, e favoritas nunca são banidas. Assim, nenhuma combinação de favoritas gera conflito, e nenhuma escolha é descartada silenciosamente. Se uma regra nova do ADSET criar incompatibilidade entre facções, o filtro deve ser feito em `resolveFavorites`.
+**Por que qualquer par de favoritas é válido:** as restrições atuais do ADSET são ter a quantidade de jogadores + 1 facções jogáveis para aquela quantidade de jogadores e ter pelo menos uma militante, que não fica bloqueada. Só é possível favoritar facções jogáveis. Se uma favorita selecionada for militante, `createDraft` a usa como militante garantida; caso contrário, sorteia uma militante entre as restantes. A validação de banimentos impede que restem menos de quantidade de jogadores + 1 facções ou nenhuma militante, e favoritas nunca são banidas. Assim, nenhuma combinação de favoritas gera conflito, e nenhuma escolha é descartada silenciosamente. Se uma regra nova do ADSET criar incompatibilidade entre facções, o filtro deve ser feito em `resolveFavorites`.
 
 O ADSET clássico chama `createDraft` sem restrições e se comporta exatamente como antes.
 

@@ -44,7 +44,7 @@ export function CompetitiveBoard({ currentPlayer, players, steps, history, galle
   return (
     <div className="flex flex-col gap-6">
       <div className={BANNER} aria-live="polite">
-        <p className={HINT}>Bans e favoritos · Rodada {currentStep?.round ?? 2} de 2</p>
+        <p className={HINT}>Banimentos e favoritos · Rodada {currentStep?.round ?? 2} de 2</p>
         <p className={BANNER_TITLE}>{currentPlayer ?? "Resolvendo…"}</p>
         <p className={HINT}>
           Cada jogador tem {ACTIONS_PER_PLAYER} ações: banir duas facções, ou banir uma e favoritar outra. Tudo é público e irrevogável.

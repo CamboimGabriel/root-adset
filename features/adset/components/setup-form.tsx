@@ -169,7 +169,7 @@ export function SetupForm({
         )}
   
         <button type="submit" className={PRIMARY_BUTTON} disabled={isBusy}>
-          {isBusy ? "Criando partida…" : mode === "competitive" ? "Criar partida e iniciar os bans" : "Criar partida e sortear"}
+          {isBusy ? "Criando partida…" : mode === "competitive" ? "Criar partida e iniciar os banimentos" : "Criar partida e sortear"}
         </button>
       </form>
     </div>

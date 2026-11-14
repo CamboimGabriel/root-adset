@@ -91,7 +91,7 @@ export function DraftBoard({
 
       {resolution && (
         <section className={SECTION}>
-          <h2 className={SECTION_TITLE}>Resultado dos bans e favoritos</h2>
+          <h2 className={SECTION_TITLE}>Resultado dos banimentos e favoritos</h2>
           <p className={HINT}>
             {resolution.favorites.length > 2
               ? `${resolution.favorites.length} favoritas disputaram 2 vagas garantidas; as não sorteadas continuaram no sorteio normal.`
