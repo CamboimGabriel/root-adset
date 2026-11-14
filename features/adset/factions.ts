@@ -72,7 +72,7 @@ export const FACTIONS: Faction[] = [
   { id: "keepers", name: "Guardiões de Ferro", kind: "militant", expansion: "marauder", source: "official", color: "#8c8f96", icon: "/factions/keepers.png", board: factionBoard("keepers") },
   { id: "lilypad", name: "Diáspora Nenúfar", kind: "militant", expansion: "homeland", source: "official", color: "#a8983a", icon: "/factions/lilypad.png" },
   { id: "twilight", name: "Conselho do Crepúsculo", kind: "insurgent", expansion: "homeland", source: "official", color: "#a24f2c", icon: "/factions/twilight.png" },
-  { id: "knaves", name: "Patifes do Bosque Profundo", kind: "insurgent", expansion: "homeland", source: "official", color: "#8a8a8a", icon: "/factions/knaves.png", draftNote: "Revele 4 cartas de Capitão aleatórias (ela escolhe 3)" },
+  { id: "knaves", name: "Canalhas da Mata Profunda", kind: "insurgent", expansion: "homeland", source: "official", color: "#8a8a8a", icon: "/factions/knaves.png", draftNote: "Revele 4 cartas de Capitão aleatórias (ela escolhe 3)" },
   { id: "serpente-voraz", name: "A Serpente Voraz", kind: "insurgent", expansion: "fan", source: "fan", color: "#a12c52", icon: "/factions/serpente-voraz.png", board: factionBoard("serpente-voraz") },
   { id: "ameaca-alada", name: "Ameaça Alada", kind: "insurgent", expansion: "fan", source: "fan", color: "#5b4a6b", icon: "/factions/ameaca-alada.png", board: factionBoard("ameaca-alada") },
   { id: "associacao-aracnidea", name: "Associação Aracnídea", kind: "insurgent", expansion: "fan", source: "fan", color: "#8a67a3", icon: "/factions/associacao-aracnidea.png", board: factionBoard("associacao-aracnidea") },
