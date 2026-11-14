@@ -13,6 +13,12 @@ export interface DraftCard {
   factionId: string;
   characterId?: string;
   lockedUntilMilitant: boolean;
+  isFavorite?: boolean;
+}
+
+export interface DraftConstraints {
+  bannedIds?: string[];
+  reservedIds?: string[];
 }
 
 export interface DraftState {
@@ -23,7 +29,7 @@ export interface DraftState {
   picks: string[];
 }
 
-type Random = () => number;
+export type Random = () => number;
 
 export function shuffle<T>(items: readonly T[], random: Random = Math.random): T[] {
   const result = [...items];
@@ -54,17 +60,28 @@ export function isMilitant(faction: Faction, playerCount: number): boolean {
   return getFactionKind(faction, playerCount) === "militant";
 }
 
-export function createDraft(settings: DraftSettings, random: Random = Math.random): DraftState {
+export function createDraft(
+  settings: DraftSettings,
+  random: Random = Math.random,
+  constraints: DraftConstraints = {},
+): DraftState {
   const playerCount = settings.playerNames.length;
   const firstPlayerIndex = Math.floor(random() * playerCount);
-  const eligible = getEligibleFactions(settings.factionIds, playerCount);
+  const bannedIds = new Set(constraints.bannedIds ?? []);
+  const eligible = getEligibleFactions(settings.factionIds, playerCount).filter((faction) => !bannedIds.has(faction.id));
+  const reservedIds = new Set(constraints.reservedIds ?? []);
+  const reserved = eligible.filter((faction) => reservedIds.has(faction.id));
 
-  const [guaranteedMilitant, ...otherMilitants] = shuffle(
-    eligible.filter((faction) => isMilitant(faction, playerCount)),
-    random,
-  );
-  const insurgents = eligible.filter((faction) => !isMilitant(faction, playerCount));
-  const dealt = shuffle([...otherMilitants, ...insurgents], random).slice(0, playerCount);
+  const guaranteedMilitant =
+    reserved.find((faction) => isMilitant(faction, playerCount)) ??
+    shuffle(
+      eligible.filter((faction) => isMilitant(faction, playerCount) && !reservedIds.has(faction.id)),
+      random,
+    )[0];
+  const otherReserved = reserved.filter((faction) => faction !== guaranteedMilitant);
+  const remaining = eligible.filter((faction) => faction !== guaranteedMilitant && !reservedIds.has(faction.id));
+  const randomFill = shuffle(remaining, random).slice(0, playerCount - otherReserved.length);
+  const dealt = otherReserved.length > 0 ? shuffle([...otherReserved, ...randomFill], random) : randomFill;
   const dealtFactions = [guaranteedMilitant, ...dealt];
   const characters = shuffle(settings.characterIds, random);
 
@@ -72,6 +89,7 @@ export function createDraft(settings: DraftSettings, random: Random = Math.rando
     factionId: faction.id,
     characterId: faction.isVagabond ? characters.pop() : undefined,
     lockedUntilMilitant: index === dealtFactions.length - 1 && !isMilitant(faction, playerCount),
+    ...(reservedIds.has(faction.id) && { isFavorite: true }),
   }));
 
   return {

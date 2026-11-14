@@ -10,6 +10,7 @@ import {
   type Faction,
 } from "./factions";
 import { DECKS, LARGE_GAME_PLAYERS, MAPS, type GameComponent } from "./maps-and-decks";
+import type { MatchMode } from "./match-repository";
 import { MAX_PLAYERS, MIN_PLAYERS, validateDraftSettings } from "./validators";
 
 export interface ToggleItem {
@@ -114,9 +115,13 @@ function buildToggleGroups(selectedIds: Set<string>): ToggleGroup[] {
   }));
 }
 
-export function useSetupForm(onStart: (settings: DraftSettings) => void, onJoin: (matchId: string) => void) {
+export function useSetupForm(
+  onStart: (settings: DraftSettings, mode: MatchMode) => void,
+  onJoin: (matchId: string) => void,
+) {
   const [playerNames, setPlayerNames] = useState<string[]>(() => Array(INITIAL_PLAYER_COUNT).fill(""));
   const [joinMatchId, setJoinMatchId] = useState("");
+  const [mode, setMode] = useState<MatchMode>("classic");
   const [selectedIds, setSelectedIds] = useState(
     () => new Set([...DEFAULT_SELECTED_IDS, ...DEFAULT_SELECTED_COMPONENT_KEYS]),
   );
@@ -160,7 +165,7 @@ export function useSetupForm(onStart: (settings: DraftSettings) => void, onJoin:
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setHasSubmitted(true);
-    if (errors.length === 0) onStart(settings);
+    if (errors.length === 0) onStart(settings, mode);
   };
 
   const handleJoin = (event: FormEvent<HTMLFormElement>) => {
@@ -169,6 +174,8 @@ export function useSetupForm(onStart: (settings: DraftSettings) => void, onJoin:
   };
 
   return {
+    mode,
+    changeMode: setMode,
     joinMatchId,
     changeJoinMatchId: setJoinMatchId,
     handleJoin,

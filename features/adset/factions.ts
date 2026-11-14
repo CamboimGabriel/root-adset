@@ -118,6 +118,15 @@ export const CHARACTERS_BY_ID = new Map(VAGABOND_CHARACTERS.map((character) => [
 
 export const KNAVES_ID = "knaves";
 
+export function normalizeName(text: string): string {
+  return text.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase().trim();
+}
+
+export function findByReference<T extends { id: string; name: string }>(items: readonly T[], reference: string): T | undefined {
+  const normalized = normalizeName(reference);
+  return items.find((item) => item.id === reference.trim() || normalizeName(item.name) === normalized);
+}
+
 export function isFactionPlayable(faction: Faction, playerCount: number): boolean {
   return playerCount >= (faction.minPlayers ?? 0);
 }

@@ -9,9 +9,25 @@ import {
 } from "./draft";
 import { getMatchIdSnapshot, getServerMatchIdSnapshot, saveMatchId, subscribeMatchId } from "./draft-storage";
 import { createMatchRequest, fetchMatch, MatchNotFoundError, sendMatchAction } from "./match-api";
-import type { Match } from "./match-repository";
+import type { Match, MatchMode } from "./match-repository";
 import { isValidMatchId, MATCH_ID_LENGTH, normalizeMatchId } from "./validators";
-import { CHARACTERS_BY_ID, FACTION_KIND_LABELS, FACTIONS_BY_ID, getFactionKind, type FactionKind } from "./factions";
+import {
+  CHARACTERS_BY_ID,
+  FACTION_KIND_LABELS,
+  FACTIONS_BY_ID,
+  getFactionKind,
+  type ContentSource,
+  type FactionKind,
+} from "./factions";
+import {
+  getActionableFactionIds,
+  getCurrentActor,
+  getPlayerActionSummary,
+  getSnakeOrder,
+  validateCompetitiveAction,
+  type CompetitiveActionType,
+  type CompetitiveSession,
+} from "./competitive-draft";
 import { DECKS_BY_ID, MAPS_BY_ID, type GameComponent } from "./maps-and-decks";
 
 const POLL_INTERVAL_MS = 3000;
@@ -40,6 +56,51 @@ export interface FactionBoardView {
 export interface PoolCardView extends FactionView {
   status: PoolCardStatus;
   takenBy?: string;
+  isFavorite: boolean;
+}
+
+export type CompetitiveFactionStatus = "available" | "banned" | "favorited";
+
+export interface CompetitiveFactionView extends FactionView {
+  source: ContentSource;
+  status: CompetitiveFactionStatus;
+  actedBy?: string;
+  banBlockedReason: string | null;
+  favoriteBlockedReason: string | null;
+}
+
+export interface CompetitivePlayerView {
+  name: string;
+  isCurrent: boolean;
+  remainingActions: number;
+  favorite: FactionView | null;
+  bans: FactionView[];
+}
+
+export interface SnakeStepView {
+  player: string;
+  round: number;
+  status: "done" | "current" | "upcoming";
+}
+
+export interface CompetitiveActionView {
+  player: string;
+  type: CompetitiveActionType;
+  round: number;
+  faction: FactionView;
+}
+
+export interface CompetitiveBoardView {
+  currentPlayer: string | null;
+  players: CompetitivePlayerView[];
+  steps: SnakeStepView[];
+  history: CompetitiveActionView[];
+  factions: CompetitiveFactionView[];
+}
+
+export interface FavoriteResolutionView {
+  favorites: { faction: FactionView; player: string; isSelected: boolean }[];
+  bans: { faction: FactionView; player: string }[];
 }
 
 export interface PlayerView {
@@ -57,6 +118,7 @@ export interface DraftBoardView {
   currentPlayer: string | null;
   isComplete: boolean;
   canUndo: boolean;
+  resolution: FavoriteResolutionView | null;
 }
 
 function toFactionView(factionId: string, playerCount: number, characterId?: string): FactionView {
@@ -81,7 +143,78 @@ function toFactionBoardView(factionId: string | null): FactionBoardView | null {
   return { name: faction.name, color: faction.color, ...faction.board };
 }
 
-function toBoardView(draft: DraftState): DraftBoardView {
+function findActor(session: CompetitiveSession, type: CompetitiveActionType, factionId: string): string {
+  return session.actions.find((action) => action.type === type && action.factionId === factionId)?.player ?? "";
+}
+
+function toResolutionView(session: CompetitiveSession | null, playerCount: number): FavoriteResolutionView | null {
+  const resolution = session?.resolution;
+  if (!session || !resolution) return null;
+  return {
+    favorites: resolution.favoriteIds.map((factionId) => ({
+      faction: toFactionView(factionId, playerCount),
+      player: findActor(session, "favorite", factionId),
+      isSelected: resolution.selectedFavoriteIds.includes(factionId),
+    })),
+    bans: resolution.bannedIds.map((factionId) => ({
+      faction: toFactionView(factionId, playerCount),
+      player: findActor(session, "ban", factionId),
+    })),
+  };
+}
+
+function toCompetitiveFactionView(
+  factionId: string,
+  session: CompetitiveSession,
+  settings: DraftSettings,
+): CompetitiveFactionView {
+  const playerCount = settings.playerNames.length;
+  const bannedBy = findActor(session, "ban", factionId);
+  const favoritedBy = findActor(session, "favorite", factionId);
+  const status: CompetitiveFactionStatus = bannedBy ? "banned" : favoritedBy ? "favorited" : "available";
+  return {
+    ...toFactionView(factionId, playerCount),
+    source: FACTIONS_BY_ID.get(factionId)!.source,
+    status,
+    actedBy: bannedBy || favoritedBy || undefined,
+    banBlockedReason: validateCompetitiveAction(session, settings, { type: "ban", factionId }),
+    favoriteBlockedReason: validateCompetitiveAction(session, settings, { type: "favorite", factionId }),
+  };
+}
+
+function toCompetitiveBoardView(session: CompetitiveSession, settings: DraftSettings): CompetitiveBoardView {
+  const playerCount = settings.playerNames.length;
+  const currentPlayer = getCurrentActor(session);
+  const steps = getSnakeOrder(session.order).map((player, index) => ({
+    player,
+    round: index < session.order.length ? 1 : 2,
+    status: index < session.actions.length ? "done" : index === session.actions.length ? "current" : "upcoming",
+  })) satisfies SnakeStepView[];
+
+  return {
+    currentPlayer,
+    players: session.order.map((name) => {
+      const summary = getPlayerActionSummary(session, name);
+      return {
+        name,
+        isCurrent: name === currentPlayer,
+        remainingActions: summary.remainingActions,
+        favorite: summary.favoriteId ? toFactionView(summary.favoriteId, playerCount) : null,
+        bans: summary.bannedIds.map((id) => toFactionView(id, playerCount)),
+      };
+    }),
+    steps,
+    history: session.actions.map((action, index) => ({
+      player: action.player,
+      type: action.type,
+      round: steps[index].round,
+      faction: toFactionView(action.factionId, playerCount),
+    })),
+    factions: getActionableFactionIds(settings).map((id) => toCompetitiveFactionView(id, session, settings)),
+  };
+}
+
+function toBoardView(draft: DraftState, competitive: CompetitiveSession | null): DraftBoardView {
   const currentPickerIndex = getCurrentPickerIndex(draft);
   const playerCount = draft.turnOrder.length;
   const factionByPlayer = getFactionByPlayer(draft);
@@ -101,7 +234,12 @@ function toBoardView(draft: DraftState): DraftBoardView {
   const pool = draft.pool.map((card) => {
     const takenBy = playerByFaction.get(card.factionId);
     const status: PoolCardStatus = takenBy ? "taken" : isCardLocked(draft, card) ? "locked" : "available";
-    return { ...toFactionView(card.factionId, playerCount, card.characterId), status, takenBy };
+    return {
+      ...toFactionView(card.factionId, playerCount, card.characterId),
+      status,
+      takenBy,
+      isFavorite: card.isFavorite === true,
+    };
   });
 
   return {
@@ -112,6 +250,7 @@ function toBoardView(draft: DraftState): DraftBoardView {
     currentPlayer: currentPickerIndex === null ? null : draft.turnOrder[currentPickerIndex],
     isComplete: isDraftComplete(draft),
     canUndo: draft.picks.length > 0,
+    resolution: toResolutionView(competitive, playerCount),
   };
 }
 
@@ -132,7 +271,17 @@ export function useAdsetDraft() {
   const [openedBoardFactionId, setOpenedBoardFactionId] = useState<string | null>(null);
 
   const currentMatch = match && match.id === matchId ? match : null;
-  const board = useMemo(() => (currentMatch ? toBoardView(currentMatch.draft) : null), [currentMatch]);
+  const board = useMemo(
+    () => (currentMatch?.draft ? toBoardView(currentMatch.draft, currentMatch.competitive ?? null) : null),
+    [currentMatch],
+  );
+  const competitiveBoard = useMemo(
+    () =>
+      currentMatch?.competitive && !currentMatch.draft
+        ? toCompetitiveBoardView(currentMatch.competitive, currentMatch.settings)
+        : null,
+    [currentMatch],
+  );
 
   useEffect(() => {
     if (!matchId) return;
@@ -178,7 +327,18 @@ export function useAdsetDraft() {
   const openFactionBoard = (factionId: string) => setOpenedBoardFactionId(factionId);
   const closeFactionBoard = () => setOpenedBoardFactionId(null);
 
-  const startDraft = (settings: DraftSettings) => runRequest(() => createMatchRequest(settings));
+  const startDraft = (settings: DraftSettings, mode: MatchMode) => runRequest(() => createMatchRequest(mode, settings));
+
+  const actOnFaction = (type: CompetitiveActionType, factionId: string) => {
+    if (!currentMatch || !competitiveBoard) return;
+    const verb = type === "ban" ? "Banir" : "Favoritar";
+    const factionName = FACTIONS_BY_ID.get(factionId)?.name;
+    if (!window.confirm(`${competitiveBoard.currentPlayer}: ${verb} ${factionName}? Essa ação é irrevogável.`)) return;
+    runRequest(() => sendMatchAction(currentMatch, { type, factionId }));
+  };
+
+  const banFaction = (factionId: string) => actOnFaction("ban", factionId);
+  const favoriteFaction = (factionId: string) => actOnFaction("favorite", factionId);
 
   const joinMatch = (rawId: string) => {
     const id = normalizeMatchId(rawId);
@@ -213,6 +373,7 @@ export function useAdsetDraft() {
     isLoadingMatch: Boolean(matchId) && !currentMatch,
     matchId,
     board,
+    competitiveBoard,
     error,
     isBusy,
     openedFactionBoard: toFactionBoardView(openedBoardFactionId),
@@ -220,6 +381,8 @@ export function useAdsetDraft() {
     closeFactionBoard,
     startDraft,
     joinMatch,
+    banFaction,
+    favoriteFaction,
     pick,
     undo,
     copyMatchId,

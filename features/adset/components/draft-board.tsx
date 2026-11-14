@@ -1,18 +1,15 @@
 import Image from "next/image";
 import type { FactionKind } from "../factions";
 import type { DraftBoardView, FactionBoardView, PoolCardStatus } from "../use-adset-draft";
+import { BAN_ICON, STAR_ICON } from "./faction-gallery";
 
 interface DraftBoardProps extends DraftBoardView {
-  matchId: string;
-  error: string | null;
   isBusy: boolean;
-  onCopyMatchId: () => void;
   openedFactionBoard: FactionBoardView | null;
   onPick: (factionId: string) => void;
   onOpenFactionBoard: (factionId: string) => void;
   onCloseFactionBoard: () => void;
   onUndo: () => void;
-  onLeave: () => void;
 }
 
 const SECTION = "flex flex-col gap-3 rounded-2xl border border-stone-700 bg-stone-900/60 p-5";
@@ -47,9 +44,14 @@ const BOARD_IMAGE = "h-auto w-full rounded-lg";
 const BOARD_IMAGE_SIZES = "(max-width: 1024px) 100vw, 1024px";
 const CARD_DETAIL = "text-sm text-stone-300";
 const CARD_STATUS_LABEL = "text-xs font-semibold uppercase tracking-wide text-stone-300";
-const MATCH_BAR = "flex items-center justify-between gap-4 rounded-2xl border border-stone-700 bg-stone-900/60 px-5 py-3";
-const MATCH_ID = "font-mono text-2xl font-bold tracking-widest text-amber-200";
-const ERROR_BOX = "rounded-xl border border-red-500/50 bg-red-950/40 p-4 text-sm text-red-200";
+const RESOLUTION_GRID = "grid grid-cols-1 gap-2 sm:grid-cols-2";
+const RESOLUTION_ITEM = "flex animate-reveal items-center gap-3 rounded-lg px-3 py-2 text-sm";
+const RESOLUTION_SELECTED = "bg-amber-400/15 ring-1 ring-amber-400";
+const RESOLUTION_UNSELECTED = "bg-stone-800/70 ring-1 ring-stone-700";
+const RESOLUTION_BANNED = "bg-red-950/50 ring-1 ring-red-900 opacity-80";
+const RESOLUTION_ICON = "size-8 shrink-0 rounded-full object-contain p-0.5";
+const RESOLUTION_STAGGER_MS = 120;
+const FAVORITE_TAG = "inline-flex items-center gap-1 self-start rounded bg-amber-400 px-1.5 py-0.5 text-xs font-semibold text-stone-950";
 const COMPONENT_GRID = "grid grid-cols-1 gap-3 sm:grid-cols-2";
 const COMPONENT_CARD = "flex items-start gap-4 rounded-xl bg-stone-800/60 p-4 ring-1 ring-stone-700";
 const COMPONENT_IMAGE = "h-auto w-28 shrink-0 rounded-lg";
@@ -57,10 +59,7 @@ const ACTIONS = "flex flex-wrap gap-3";
 const SECONDARY_BUTTON = "rounded-lg border border-stone-600 px-4 py-2 text-sm text-stone-200 transition hover:bg-stone-800 disabled:opacity-40";
 
 export function DraftBoard({
-  matchId,
-  error,
   isBusy,
-  onCopyMatchId,
   map,
   deck,
   players,
@@ -68,27 +67,15 @@ export function DraftBoard({
   currentPlayer,
   isComplete,
   canUndo,
+  resolution,
   openedFactionBoard,
   onPick,
   onOpenFactionBoard,
   onCloseFactionBoard,
   onUndo,
-  onLeave,
 }: DraftBoardProps) {
   return (
     <div className="flex flex-col gap-6">
-      <div className={MATCH_BAR}>
-        <span className="flex flex-col">
-          <span className={HINT}>ID da partida</span>
-          <span className={MATCH_ID}>{matchId}</span>
-        </span>
-        <button type="button" className={SECONDARY_BUTTON} onClick={onCopyMatchId}>
-          Copiar ID
-        </button>
-      </div>
-
-      {error && <p className={ERROR_BOX}>{error}</p>}
-
       <div className={BANNER}>
         {isComplete ? (
           <p className={BANNER_TITLE}>Draft concluído!</p>
@@ -100,6 +87,51 @@ export function DraftBoard({
           </>
         )}
       </div>
+
+      {resolution && (
+        <section className={SECTION}>
+          <h2 className={SECTION_TITLE}>Resultado dos bans e favoritos</h2>
+          <p className={HINT}>
+            {resolution.favorites.length > 2
+              ? `${resolution.favorites.length} favoritas disputaram 2 vagas garantidas; as não sorteadas continuaram no sorteio normal.`
+              : "Até 2 favoritas entram garantidas; o resto do pool foi sorteado normalmente."}
+          </p>
+          <ul className={RESOLUTION_GRID}>
+            {resolution.favorites.map(({ faction, player, isSelected }, index) => (
+              <li
+                key={faction.id}
+                className={`${RESOLUTION_ITEM} ${isSelected ? RESOLUTION_SELECTED : RESOLUTION_UNSELECTED}`}
+                style={{ animationDelay: `${index * RESOLUTION_STAGGER_MS}ms` }}
+              >
+                <Image src={faction.icon} alt="" width={32} height={32} className={RESOLUTION_ICON} style={{ backgroundColor: faction.color }} />
+                <span className="flex flex-col">
+                  <span className="font-medium">
+                    <span aria-hidden>{STAR_ICON}</span> {faction.name}
+                  </span>
+                  <span className="text-xs text-stone-400">
+                    Favoritada por {player} · {isSelected ? "vaga garantida" : "não sorteada, seguiu elegível"}
+                  </span>
+                </span>
+              </li>
+            ))}
+            {resolution.bans.map(({ faction, player }, index) => (
+              <li
+                key={faction.id}
+                className={`${RESOLUTION_ITEM} ${RESOLUTION_BANNED}`}
+                style={{ animationDelay: `${(resolution.favorites.length + index) * RESOLUTION_STAGGER_MS}ms` }}
+              >
+                <Image src={faction.icon} alt="" width={32} height={32} className={`${RESOLUTION_ICON} grayscale`} style={{ backgroundColor: faction.color }} />
+                <span className="flex flex-col">
+                  <span className="font-medium line-through">
+                    <span aria-hidden>{BAN_ICON}</span> {faction.name}
+                  </span>
+                  <span className="text-xs text-stone-400">Banida por {player}</span>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <section className={SECTION}>
         <h2 className={SECTION_TITLE}>Mapa e baralho</h2>
@@ -155,6 +187,11 @@ export function DraftBoard({
                 <Image src={card.icon} alt="" width={56} height={56} className={CARD_ICON} style={{ backgroundColor: card.color }} />
                 <span className="flex flex-col gap-1">
                   <span className="font-semibold">{card.name}</span>
+                  {card.isFavorite && (
+                    <span className={FAVORITE_TAG}>
+                      <span aria-hidden>{STAR_ICON}</span> Favorita
+                    </span>
+                  )}
                   <span className={CARD_DETAIL}>{card.kindLabel}</span>
                   {card.characterName && <span className={CARD_DETAIL}>Personagem: {card.characterName}</span>}
                   {card.note && <span className={CARD_DETAIL}>{card.note}</span>}
@@ -200,9 +237,6 @@ export function DraftBoard({
       <div className={ACTIONS}>
         <button type="button" className={SECONDARY_BUTTON} disabled={isBusy || !canUndo} onClick={onUndo}>
           Desfazer última escolha
-        </button>
-        <button type="button" className={SECONDARY_BUTTON} onClick={onLeave}>
-          Sair da partida
         </button>
       </div>
     </div>

@@ -1,6 +1,8 @@
 import { getEligibleFactions, isMilitant, type DraftAction, type DraftSettings, type DraftState } from "./draft";
 import { CHARACTERS_BY_ID, FACTIONS_BY_ID, KNAVES_ID } from "./factions";
 import { DECKS_BY_ID, MAPS_BY_ID } from "./maps-and-decks";
+import type { CompetitiveActionInput, CompetitiveSession } from "./competitive-draft";
+import type { Match, MatchMode } from "./match-repository";
 
 export const MIN_PLAYERS = 2;
 export const MAX_PLAYERS = 6;
@@ -99,6 +101,51 @@ export function isDraftAction(value: unknown): value is DraftAction {
   return action.type === "pick" && typeof action.factionId === "string";
 }
 
+function isValidCompetitiveAction(value: unknown): boolean {
+  if (!isCompetitiveActionInput(value)) return false;
+  return typeof (value as unknown as Record<string, unknown>).player === "string";
+}
+
+function isValidFavoriteResolution(value: unknown): boolean {
+  if (value === null) return true;
+  if (typeof value !== "object") return false;
+  const resolution = value as Record<string, unknown>;
+  return (
+    isStringArray(resolution.favoriteIds) &&
+    isStringArray(resolution.selectedFavoriteIds) &&
+    isStringArray(resolution.bannedIds)
+  );
+}
+
+export function isValidCompetitiveSession(value: unknown): value is CompetitiveSession {
+  if (typeof value !== "object" || value === null) return false;
+  const session = value as Record<string, unknown>;
+  return (
+    isStringArray(session.order) &&
+    Array.isArray(session.actions) &&
+    session.actions.every(isValidCompetitiveAction) &&
+    isValidFavoriteResolution(session.resolution)
+  );
+}
+
+export function isValidMatchPayload(value: unknown): value is Match {
+  if (typeof value !== "object" || value === null) return false;
+  const match = value as Record<string, unknown>;
+  if (typeof match.id !== "string" || !isValidMatchVersion(match.version)) return false;
+  if (match.competitive != null && !isValidCompetitiveSession(match.competitive)) return false;
+  return match.draft == null ? match.competitive != null : isValidDraftState(match.draft);
+}
+
+export function isCompetitiveActionInput(value: unknown): value is CompetitiveActionInput {
+  if (typeof value !== "object" || value === null) return false;
+  const action = value as Record<string, unknown>;
+  return (action.type === "ban" || action.type === "favorite") && typeof action.factionId === "string";
+}
+
+export function isMatchMode(value: unknown): value is MatchMode {
+  return value === "classic" || value === "competitive";
+}
+
 export function isValidMatchVersion(value: unknown): value is number {
   return Number.isInteger(value) && (value as number) >= 0;
 }
@@ -110,6 +157,7 @@ function isValidDraftCard(value: unknown): boolean {
     typeof card.factionId === "string" &&
     FACTIONS_BY_ID.has(card.factionId) &&
     typeof card.lockedUntilMilitant === "boolean" &&
+    (card.isFavorite === undefined || typeof card.isFavorite === "boolean") &&
     (card.characterId === undefined ||
       (typeof card.characterId === "string" && CHARACTERS_BY_ID.has(card.characterId)))
   );

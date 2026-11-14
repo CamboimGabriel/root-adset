@@ -1,8 +1,11 @@
 import Image from "next/image";
 import type { FormEvent } from "react";
+import type { MatchMode } from "../match-repository";
 import type { ToggleGroup } from "../use-setup-form";
 
 interface SetupFormProps {
+  mode: MatchMode;
+  onModeChange: (mode: MatchMode) => void;
   joinMatchId: string;
   onJoinMatchIdChange: (matchId: string) => void;
   onJoin: (event: FormEvent<HTMLFormElement>) => void;
@@ -37,8 +40,21 @@ const FACTION_ICON = "size-8 shrink-0 rounded-full object-contain p-0.5";
 const COMPONENT_ICON = "size-8 shrink-0 rounded-md object-cover";
 const TOGGLE_DETAIL = "ml-auto text-xs text-stone-400";
 const ERROR_BOX = "rounded-xl border border-red-500/50 bg-red-950/40 p-4 text-sm text-red-200";
+const MODE_GRID = "grid grid-cols-1 gap-3 sm:grid-cols-2";
+const MODE_OPTION = "flex cursor-pointer flex-col gap-1 rounded-xl border border-stone-700 p-4 transition has-[:checked]:border-amber-400 has-[:checked]:bg-amber-400/10 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-amber-400";
+const MODE_TITLE = "font-semibold text-stone-100";
+const MODE_OPTIONS: { value: MatchMode; title: string; description: string }[] = [
+  { value: "classic", title: "ADSET clássico", description: "Sorteio direto das facções, como no livro de regras." },
+  {
+    value: "competitive",
+    title: "ADSET competitivo",
+    description: "Antes do sorteio, cada jogador faz 2 ações em snake: banir facções ou favoritar uma.",
+  },
+];
 
 export function SetupForm({
+  mode,
+  onModeChange,
   joinMatchId,
   onJoinMatchIdChange,
   onJoin,
@@ -78,6 +94,26 @@ export function SetupForm({
       {matchError && <p className={ERROR_BOX}>{matchError}</p>}
 
       <form onSubmit={onSubmit} className="flex flex-col gap-6">
+        <fieldset className={SECTION}>
+          <legend className="sr-only">Modo de jogo</legend>
+          <h2 className={SECTION_TITLE}>Modo</h2>
+          <div className={MODE_GRID}>
+            {MODE_OPTIONS.map((option) => (
+              <label key={option.value} className={MODE_OPTION}>
+                <input
+                  type="radio"
+                  name="mode"
+                  className="sr-only"
+                  checked={mode === option.value}
+                  onChange={() => onModeChange(option.value)}
+                />
+                <span className={MODE_TITLE}>{option.title}</span>
+                <span className={HINT}>{option.description}</span>
+              </label>
+            ))}
+          </div>
+        </fieldset>
+
         <section className={SECTION}>
           <h2 className={SECTION_TITLE}>Jogadores</h2>
           <p className={HINT}>Digite na ordem em que estão sentados (sentido horário). O primeiro jogador será sorteado.</p>
@@ -133,7 +169,7 @@ export function SetupForm({
         )}
   
         <button type="submit" className={PRIMARY_BUTTON} disabled={isBusy}>
-          {isBusy ? "Criando partida…" : "Criar partida e sortear"}
+          {isBusy ? "Criando partida…" : mode === "competitive" ? "Criar partida e iniciar os bans" : "Criar partida e sortear"}
         </button>
       </form>
     </div>
