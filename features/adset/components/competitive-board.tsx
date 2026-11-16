@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { ACTIONS_PER_PLAYER } from "../competitive-draft";
 import type { CompetitiveBoardView, SnakeStepView } from "../use-adset-draft";
 import { BAN_ICON, STAR_ICON } from "./faction-gallery";
+import { GameComponentsSection } from "./game-components-section";
 
 interface CompetitiveBoardProps extends CompetitiveBoardView {
   gallery: ReactNode;
@@ -37,7 +38,7 @@ const HISTORY_INDEX = "w-6 shrink-0 text-right text-xs text-stone-500";
 const HISTORY_ICON = "size-7 shrink-0 rounded-full object-contain p-0.5";
 const EMPTY = "text-sm text-stone-500";
 
-export function CompetitiveBoard({ currentPlayer, players, steps, history, gallery }: CompetitiveBoardProps) {
+export function CompetitiveBoard({ components, currentPlayer, players, steps, history, gallery }: CompetitiveBoardProps) {
   const currentStep = steps.find((step) => step.status === "current");
   const rounds = [1, 2].map((round) => steps.filter((step) => step.round === round));
 
@@ -50,6 +51,8 @@ export function CompetitiveBoard({ currentPlayer, players, steps, history, galle
           Cada jogador tem {ACTIONS_PER_PLAYER} ações: banir duas facções, ou banir uma e favoritar outra. Tudo é público e irrevogável.
         </p>
       </div>
+
+      {components && <GameComponentsSection map={components.map} deck={components.deck} />}
 
       <section className={SECTION}>
         <h2 className={SECTION_TITLE}>Ordem das ações</h2>

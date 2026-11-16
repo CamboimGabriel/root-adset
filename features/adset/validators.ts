@@ -113,11 +113,24 @@ function isValidFavoriteResolution(value: unknown): boolean {
   );
 }
 
+function isValidDraftComponents(value: unknown): boolean {
+  if (value === undefined) return true;
+  if (typeof value !== "object" || value === null) return false;
+  const components = value as Record<string, unknown>;
+  return (
+    typeof components.mapId === "string" &&
+    MAPS_BY_ID.has(components.mapId) &&
+    typeof components.deckId === "string" &&
+    DECKS_BY_ID.has(components.deckId)
+  );
+}
+
 export function isValidCompetitiveSession(value: unknown): value is CompetitiveSession {
   if (typeof value !== "object" || value === null) return false;
   const session = value as Record<string, unknown>;
   return (
     isStringArray(session.order) &&
+    isValidDraftComponents(session.components) &&
     Array.isArray(session.actions) &&
     session.actions.every(isValidCompetitiveAction) &&
     isValidFavoriteResolution(session.resolution)

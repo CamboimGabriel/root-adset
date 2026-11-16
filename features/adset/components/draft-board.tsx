@@ -2,6 +2,7 @@ import Image from "next/image";
 import type { FactionKind } from "../factions";
 import type { DraftBoardView, FactionBoardView, PoolCardStatus } from "../use-adset-draft";
 import { BAN_ICON, STAR_ICON } from "./faction-gallery";
+import { GameComponentsSection } from "./game-components-section";
 
 interface DraftBoardProps extends DraftBoardView {
   isBusy: boolean;
@@ -53,9 +54,6 @@ const RESOLUTION_BANNED = "bg-red-950/50 ring-1 ring-red-900 opacity-80";
 const RESOLUTION_ICON = "size-8 shrink-0 rounded-full object-contain p-0.5";
 const RESOLUTION_STAGGER_MS = 120;
 const FAVORITE_TAG = "inline-flex items-center gap-1 self-start rounded bg-amber-400 px-1.5 py-0.5 text-xs font-semibold text-stone-950";
-const COMPONENT_GRID = "grid grid-cols-1 gap-3 sm:grid-cols-2";
-const COMPONENT_CARD = "flex items-start gap-4 rounded-xl bg-stone-800/60 p-4 ring-1 ring-stone-700";
-const COMPONENT_IMAGE = "h-auto w-28 shrink-0 rounded-lg";
 const ACTIONS = "flex flex-wrap gap-3";
 const SECONDARY_BUTTON = "rounded-lg border border-stone-600 px-4 py-2 text-sm text-stone-200 transition hover:bg-stone-800 disabled:opacity-40";
 
@@ -134,25 +132,7 @@ export function DraftBoard({
         </section>
       )}
 
-      <section className={SECTION}>
-        <h2 className={SECTION_TITLE}>Mapa e baralho</h2>
-        <div className={COMPONENT_GRID}>
-          {[
-            { label: "Mapa", component: map },
-            { label: "Baralho", component: deck },
-          ].map(({ label, component }) => (
-            <div key={label} className={COMPONENT_CARD}>
-              <Image src={component.image} alt={component.name} width={350} height={320} className={COMPONENT_IMAGE} />
-              <span className="flex flex-col gap-1">
-                <span className={CARD_STATUS_LABEL}>{label}</span>
-                <span className="text-lg font-semibold">{component.name}</span>
-                <span className={CARD_DETAIL}>{component.source === "official" ? "Oficial" : "Fã"}</span>
-                {component.setupNote && <span className={CARD_DETAIL}>{component.setupNote}</span>}
-              </span>
-            </div>
-          ))}
-        </div>
-      </section>
+      <GameComponentsSection map={map} deck={deck} />
 
       <section className={SECTION}>
         <h2 className={SECTION_TITLE}>Ordem de turno</h2>

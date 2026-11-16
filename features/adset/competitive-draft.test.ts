@@ -123,9 +123,21 @@ describe("snake order", () => {
   it("shuffles the starting order among the same players for any supported count", () => {
     for (const count of [2, 3, 5, 6]) {
       const players = Array.from({ length: count }, (_, index) => `P${index}`);
-      const session = createCompetitiveSession(players, seededRandom(count));
+      const session = createCompetitiveSession(settingsFor(players), seededRandom(count));
       expect([...session.order].sort()).toEqual([...players].sort());
       expect(getSnakeOrder(session.order)).toHaveLength(count * 2);
+    }
+  });
+
+  it("draws the map and deck up front and keeps them in the final ADSET", () => {
+    const settings = { ...settingsFor(["A", "B", "C"]), mapIds: ["autumn", "winter", "lake"], deckIds: ["base", "exiles-partisans"] };
+    const random = seededRandom(9);
+    for (let run = 0; run < 50; run++) {
+      const session = createCompetitiveSession(settings, random);
+      expect(settings.mapIds).toContain(session.components!.mapId);
+      expect(settings.deckIds).toContain(session.components!.deckId);
+      const { draft } = finishCompetitiveDraft(session, settings, random);
+      expect({ mapId: draft.mapId, deckId: draft.deckId }).toEqual(session.components);
     }
   });
 });

@@ -1,9 +1,11 @@
 import {
   createDraft,
+  drawComponents,
   getDealableCount,
   getEligibleFactions,
   isMilitant,
   shuffle,
+  type DraftComponents,
   type DraftSettings,
   type DraftState,
   type Random,
@@ -28,6 +30,7 @@ export interface FavoriteResolution {
 
 export interface CompetitiveSession {
   order: string[];
+  components?: DraftComponents;
   actions: CompetitiveAction[];
   resolution: FavoriteResolution | null;
 }
@@ -42,8 +45,13 @@ export interface PlayerActionSummary {
 export const ACTIONS_PER_PLAYER = 2;
 export const MAX_RESERVED_FAVORITES = 2;
 
-export function createCompetitiveSession(playerNames: string[], random: Random = Math.random): CompetitiveSession {
-  return { order: shuffle(playerNames, random), actions: [], resolution: null };
+export function createCompetitiveSession(settings: DraftSettings, random: Random = Math.random): CompetitiveSession {
+  return {
+    order: shuffle(settings.playerNames, random),
+    components: drawComponents(settings, random),
+    actions: [],
+    resolution: null,
+  };
 }
 
 export function getSnakeOrder(order: readonly string[]): string[] {
@@ -139,6 +147,7 @@ export function finishCompetitiveDraft(
   const draft = createDraft(settings, random, {
     bannedIds: resolution.bannedIds,
     reservedIds: resolution.selectedFavoriteIds,
+    components: session.components,
   });
   return { session: { ...session, resolution }, draft };
 }

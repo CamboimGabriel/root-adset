@@ -93,6 +93,7 @@ export interface CompetitiveActionView {
 }
 
 export interface CompetitiveBoardView {
+  components: { map: GameComponent; deck: GameComponent } | null;
   currentPlayer: string | null;
   players: CompetitivePlayerView[];
   steps: SnakeStepView[];
@@ -194,6 +195,9 @@ function toCompetitiveBoardView(session: CompetitiveSession, settings: DraftSett
   })) satisfies SnakeStepView[];
 
   return {
+    components: session.components
+      ? { map: MAPS_BY_ID.get(session.components.mapId)!, deck: DECKS_BY_ID.get(session.components.deckId)! }
+      : null,
     currentPlayer,
     players: session.order.map((name) => {
       const summary = getPlayerActionSummary(session, name);

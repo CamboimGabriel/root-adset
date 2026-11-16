@@ -16,9 +16,15 @@ export interface DraftCard {
   isFavorite?: boolean;
 }
 
+export interface DraftComponents {
+  mapId: string;
+  deckId: string;
+}
+
 export interface DraftConstraints {
   bannedIds?: string[];
   reservedIds?: string[];
+  components?: DraftComponents;
 }
 
 export interface DraftState {
@@ -74,6 +80,13 @@ export function getDealableCount(factions: readonly Faction[]): number {
   return factions.reduce<Faction[]>((pool, faction) => (canJoinPool(pool, faction) ? [...pool, faction] : pool), []).length;
 }
 
+export function drawComponents(settings: DraftSettings, random: Random = Math.random): DraftComponents {
+  return {
+    mapId: pickRandom(getRecommendedMapIds(settings.mapIds, settings.playerNames.length), random),
+    deckId: pickRandom(settings.deckIds, random),
+  };
+}
+
 function fillPool(base: readonly Faction[], candidates: readonly Faction[], count: number): Faction[] {
   const fill: Faction[] = [];
   for (const faction of candidates) {
@@ -116,8 +129,7 @@ export function createDraft(
   }));
 
   return {
-    mapId: pickRandom(getRecommendedMapIds(settings.mapIds, settings.playerNames.length), random),
-    deckId: pickRandom(settings.deckIds, random),
+    ...(constraints.components ?? drawComponents(settings, random)),
     turnOrder: rotate(settings.playerNames, firstPlayerIndex),
     pool,
     picks: [],

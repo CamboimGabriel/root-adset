@@ -17,7 +17,7 @@ export async function POST(request: Request) {
   const match = await createMatch({
     mode,
     settings,
-    competitive: isCompetitive ? createCompetitiveSession(settings.playerNames) : null,
+    competitive: isCompetitive ? createCompetitiveSession(settings) : null,
     draft: isCompetitive ? null : createDraft(settings),
   });
   return Response.json(match, { status: 201 });
