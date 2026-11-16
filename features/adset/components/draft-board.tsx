@@ -66,6 +66,7 @@ export function DraftBoard({
   currentPlayer,
   isComplete,
   canUndo,
+  undoLabel,
   resolution,
   openedFactionBoard,
   onPick,
@@ -218,7 +219,7 @@ export function DraftBoard({
 
       <div className={ACTIONS}>
         <button type="button" className={SECONDARY_BUTTON} disabled={isBusy || !canUndo} onClick={onUndo}>
-          Desfazer última escolha
+          {undoLabel}
         </button>
       </div>
     </div>

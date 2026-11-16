@@ -129,6 +129,15 @@ export function applyCompetitiveAction(session: CompetitiveSession, action: Comp
   return { ...session, actions: [...session.actions, { ...action, player: actor }] };
 }
 
+export function canUndoCompetitiveAction(session: CompetitiveSession): boolean {
+  return session.actions.length > 0;
+}
+
+export function undoCompetitiveAction(session: CompetitiveSession): CompetitiveSession {
+  if (!canUndoCompetitiveAction(session)) return session;
+  return { ...session, actions: session.actions.slice(0, -1), resolution: null };
+}
+
 export function resolveFavorites(session: CompetitiveSession, random: Random = Math.random): FavoriteResolution {
   const favoriteIds = getFavoriteIds(session);
   return {

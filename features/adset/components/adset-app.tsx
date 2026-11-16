@@ -51,6 +51,8 @@ export function AdsetApp() {
         {draft.competitiveBoard ? (
           <CompetitiveBoard
             {...draft.competitiveBoard}
+            isBusy={draft.isBusy}
+            onUndo={draft.undo}
             gallery={
               <FactionGallery
                 factions={gallery.visibleFactions}

@@ -7,6 +7,8 @@ import { GameComponentsSection } from "./game-components-section";
 
 interface CompetitiveBoardProps extends CompetitiveBoardView {
   gallery: ReactNode;
+  isBusy: boolean;
+  onUndo: () => void;
 }
 
 const SECTION = "flex flex-col gap-3 rounded-2xl border border-stone-700 bg-stone-900/60 p-5";
@@ -37,8 +39,21 @@ const HISTORY_ITEM = "flex animate-pop-in items-center gap-3 rounded-lg bg-stone
 const HISTORY_INDEX = "w-6 shrink-0 text-right text-xs text-stone-500";
 const HISTORY_ICON = "size-7 shrink-0 rounded-full object-contain p-0.5";
 const EMPTY = "text-sm text-stone-500";
+const SECTION_HEADER = "flex flex-wrap items-center justify-between gap-3";
+const SECONDARY_BUTTON =
+  "rounded-lg border border-stone-600 px-3 py-1.5 text-sm text-stone-200 transition hover:bg-stone-800 disabled:cursor-not-allowed disabled:opacity-40";
 
-export function CompetitiveBoard({ components, currentPlayer, players, steps, history, gallery }: CompetitiveBoardProps) {
+export function CompetitiveBoard({
+  components,
+  currentPlayer,
+  players,
+  steps,
+  history,
+  canUndo,
+  gallery,
+  isBusy,
+  onUndo,
+}: CompetitiveBoardProps) {
   const currentStep = steps.find((step) => step.status === "current");
   const rounds = [1, 2].map((round) => steps.filter((step) => step.round === round));
 
@@ -48,7 +63,7 @@ export function CompetitiveBoard({ components, currentPlayer, players, steps, hi
         <p className={HINT}>Banimentos e favoritos · Rodada {currentStep?.round ?? 2} de 2</p>
         <p className={BANNER_TITLE}>{currentPlayer ?? "Resolvendo…"}</p>
         <p className={HINT}>
-          Cada jogador tem {ACTIONS_PER_PLAYER} ações: banir duas facções, ou banir uma e favoritar outra. Tudo é público e irrevogável.
+          Cada jogador tem {ACTIONS_PER_PLAYER} ações: banir duas facções, ou banir uma e favoritar outra. Tudo é público.
         </p>
       </div>
 
@@ -101,7 +116,12 @@ export function CompetitiveBoard({ components, currentPlayer, players, steps, hi
       </section>
 
       <section className={SECTION}>
-        <h2 className={SECTION_TITLE}>Histórico</h2>
+        <div className={SECTION_HEADER}>
+          <h2 className={SECTION_TITLE}>Histórico</h2>
+          <button type="button" className={SECONDARY_BUTTON} disabled={isBusy || !canUndo} onClick={onUndo}>
+            Voltar última ação
+          </button>
+        </div>
         {history.length === 0 ? (
           <p className={EMPTY}>Nenhuma ação ainda. {currentPlayer} começa.</p>
         ) : (

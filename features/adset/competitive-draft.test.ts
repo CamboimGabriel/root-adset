@@ -1,12 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
   applyCompetitiveAction,
+  canUndoCompetitiveAction,
   createCompetitiveSession,
   finishCompetitiveDraft,
   getCurrentActor,
   getSnakeOrder,
   isCompetitivePhaseComplete,
   resolveFavorites,
+  undoCompetitiveAction,
   validateCompetitiveAction,
   type CompetitiveActionInput,
   type CompetitiveSession,
@@ -144,6 +146,21 @@ describe("snake order", () => {
 
 describe("ban and favorite rules", () => {
   const settings = settingsFor(["A", "B", "C", "D"]);
+
+  it("undoes the last action, returning the turn and freeing the faction", () => {
+    expect(canUndoCompetitiveAction(sessionWithOrder(["A", "B"]))).toBe(false);
+    const afterA = act(sessionWithOrder(["A", "B"]), settings, { type: "favorite", factionId: "eyrie" });
+    const afterB = act(afterA, settings, { type: "ban", factionId: "lizards" });
+
+    const undone = undoCompetitiveAction(afterB);
+    expect(undone.actions).toEqual(afterA.actions);
+    expect(getCurrentActor(undone)).toBe("B");
+    expect(validateCompetitiveAction(undone, settings, { type: "favorite", factionId: "lizards" })).toBeNull();
+
+    const backToStart = undoCompetitiveAction(undone);
+    expect(getCurrentActor(backToStart)).toBe("A");
+    expect(validateCompetitiveAction(backToStart, settings, { type: "ban", factionId: "eyrie" })).toBeNull();
+  });
 
   it("lets a player ban two factions", () => {
     const session = act(sessionWithOrder(["A"]), settings, { type: "ban", factionId: "lizards" });

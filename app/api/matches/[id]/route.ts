@@ -1,7 +1,9 @@
 import {
   applyCompetitiveAction,
+  canUndoCompetitiveAction,
   finishCompetitiveDraft,
   isCompetitivePhaseComplete,
+  undoCompetitiveAction,
   validateCompetitiveAction,
 } from "@/features/adset/competitive-draft";
 import { applyDraftAction } from "@/features/adset/draft";
@@ -27,7 +29,18 @@ async function findMatch(context: MatchRouteContext) {
   return isValidMatchId(id) ? getMatch(id) : null;
 }
 
+function getCompetitiveUndoChanges(match: Match): ChangeResult | null {
+  const { competitive, draft } = match;
+  if (!competitive || !canUndoCompetitiveAction(competitive) || (draft && draft.picks.length > 0)) return null;
+  return { changes: { competitive: undoCompetitiveAction(competitive), draft: null } };
+}
+
 function getChanges(match: Match, action: unknown): ChangeResult | null {
+  if (isDraftAction(action) && action.type === "undo") {
+    const competitiveUndo = getCompetitiveUndoChanges(match);
+    if (competitiveUndo) return competitiveUndo;
+  }
+
   if (match.draft && isDraftAction(action)) {
     const draft = applyDraftAction(match.draft, action);
     return draft === match.draft ? null : { changes: { draft } };

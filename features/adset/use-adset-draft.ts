@@ -21,6 +21,7 @@ import {
   type FactionKind,
 } from "./factions";
 import {
+  canUndoCompetitiveAction,
   getActionableFactionIds,
   getCurrentActor,
   getPlayerActionSummary,
@@ -99,6 +100,7 @@ export interface CompetitiveBoardView {
   steps: SnakeStepView[];
   history: CompetitiveActionView[];
   factions: CompetitiveFactionView[];
+  canUndo: boolean;
 }
 
 export interface FavoriteResolutionView {
@@ -121,6 +123,7 @@ export interface DraftBoardView {
   currentPlayer: string | null;
   isComplete: boolean;
   canUndo: boolean;
+  undoLabel: string;
   resolution: FavoriteResolutionView | null;
 }
 
@@ -217,6 +220,7 @@ function toCompetitiveBoardView(session: CompetitiveSession, settings: DraftSett
       faction: toFactionView(action.factionId, playerCount),
     })),
     factions: getActionableFactionIds(settings).map((id) => toCompetitiveFactionView(id, session, settings)),
+    canUndo: canUndoCompetitiveAction(session),
   };
 }
 
@@ -263,9 +267,18 @@ function toBoardView(draft: DraftState, competitive: CompetitiveSession | null):
     pool,
     currentPlayer: currentPickerIndex === null ? null : draft.turnOrder[currentPickerIndex],
     isComplete: isDraftComplete(draft),
-    canUndo: draft.picks.length > 0,
+    canUndo: draft.picks.length > 0 || (competitive !== null && canUndoCompetitiveAction(competitive)),
+    undoLabel: draft.picks.length > 0 || !competitive ? "Desfazer última escolha" : "Voltar última ação de banimento/favorito",
     resolution: toResolutionView(competitive, playerCount),
   };
+}
+
+function describeCompetitiveUndo(match: Match): string | null {
+  if (match.draft && match.draft.picks.length > 0) return null;
+  const lastAction = match.competitive?.actions.at(-1);
+  if (!lastAction) return null;
+  const verb = lastAction.type === "ban" ? "baniu" : "favoritou";
+  return `${lastAction.player} ${verb} ${FACTIONS_BY_ID.get(lastAction.factionId)?.name}`;
 }
 
 function keepNewest(current: Match | null, incoming: Match): Match {
@@ -347,7 +360,7 @@ export function useAdsetDraft() {
     if (!currentMatch || !competitiveBoard) return;
     const verb = type === "ban" ? "Banir" : "Favoritar";
     const factionName = FACTIONS_BY_ID.get(factionId)?.name;
-    if (!window.confirm(`${competitiveBoard.currentPlayer}: ${verb} ${factionName}? Essa ação é irrevogável.`)) return;
+    if (!window.confirm(`${competitiveBoard.currentPlayer}: ${verb} ${factionName}?`)) return;
     runRequest(() => sendMatchAction(currentMatch, { type, factionId }));
   };
 
@@ -369,7 +382,10 @@ export function useAdsetDraft() {
   };
 
   const undo = () => {
-    if (currentMatch) runRequest(() => sendMatchAction(currentMatch, { type: "undo" }));
+    if (!currentMatch) return;
+    const competitiveUndo = describeCompetitiveUndo(currentMatch);
+    if (competitiveUndo && !window.confirm(`Voltar a última ação (${competitiveUndo})?`)) return;
+    runRequest(() => sendMatchAction(currentMatch, { type: "undo" }));
   };
 
   const copyMatchId = () => {
